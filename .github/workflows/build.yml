@@ -39,7 +39,20 @@ jobs:
       - name: Install cargo-skyline with current target spec
         run: |
           git clone --depth 1 --branch patch-3 https://github.com/jugeeya/cargo-skyline /tmp/cargo-skyline
-          python3 -c 'from pathlib import Path; p=Path("/tmp/cargo-skyline/src/update_std.rs"); s=p.read_text(); old="\"target-c-int-width\": \"32\""; assert old in s; s=s.replace(old,"\"target-c-int-width\": 32"); old="\"target-pointer-width\": \"64\""; assert old in s; p.write_text(s.replace(old,"\"target-pointer-width\": 64"))'
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("/tmp/cargo-skyline/src/update_std.rs")
+          s = p.read_text()
+          replacements = {
+              '"target-c-int-width": "32"': '"target-c-int-width": 32',
+              '"target-pointer-width": "64"': '"target-pointer-width": 64',
+              '"data-layout": "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"': '"data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"',
+          }
+          for old, new in replacements.items():
+              assert old in s, old
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
           cargo install --path /tmp/cargo-skyline --force
 
       - name: Install Skyline standard library
