@@ -42,8 +42,6 @@ jobs:
               p.write_text(s)
           manifest = root / "Cargo.toml"
           s = manifest.read_text()
-          s += chr(10) + '[patch."https://github.com/ultimate-research/skyline-rs"]' + chr(10) + 'skyline = { git = "https://github.com/ultimate-research/skyline-rs.git", rev = "' + skyline_rev + '" }' + chr(10)
-          manifest.write_text(s)
           PY
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
@@ -73,6 +71,25 @@ jobs:
         working-directory: ${{ env.PROJECT }}
         run: |
           printf '\n[unstable]\njson-target-spec = true\n' >> .cargo/config.toml
+      - name: Pin skyline-smash transitive Skyline dependency
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          cargo fetch
+          SMASH_MANIFEST=$(find "$HOME/.cargo/git/checkouts" -path '*/skyline-smash-*/Cargo.toml' -print -quit)
+          if [ -z "$SMASH_MANIFEST" ]; then
+            echo "ERROR: skyline-smash Cargo.toml not found after cargo fetch."
+            exit 1
+          fi
+          python3 - "$SMASH_MANIFEST" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          old = 'https://github.com/ultimate-research/skyline-rs" }'
+          new = 'https://github.com/ultimate-research/skyline-rs.git", rev = "b7fe5c7c297d83f1c63d9101a6e098cfda7fdb5b" }'
+          assert old in s
+          p.write_text(s.replace(old, new))
+          PY
       - name: Build NRO
         working-directory: ${{ env.PROJECT }}
         env:
