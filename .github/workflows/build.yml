@@ -29,32 +29,21 @@ jobs:
           echo "Source project: $PROJECT"
           find "$PROJECT" -type f -name Cargo.toml -exec sed -i 's|https://github.com/austintraver/skyline-smash.git|https://github.com/ultimate-research/skyline-smash.git|' {} +
           python3 - <<'PY'
-          import os
           from pathlib import Path
-          p = Path("build/UltimateTrainingModpack-7.0.0/src/training/mod.rs")
-          s = p.read_text()
-          s = s.replace("let x8 = ctx.registers[8].x.as_mut();", "")
-          s = s.replace("*x8 = 0;", "ctx.registers[8].set_x(0);")
-          s = s.replace("let x22 = ctx.registers[22].x.as_mut();", "")
-          s = s.replace("(*x22) as *mut PauseMenu", "ctx.registers[22].x() as *mut PauseMenu")
-          s = s.replace("let x1 = ctx.registers[1].x.as_mut();", "")
-          s = s.replace("*x1 = on_text_ptr;", "ctx.registers[1].set_x(on_text_ptr);")
-          p.write_text(s)
-          ui = Path("build/UltimateTrainingModpack-7.0.0/src/training/ui/mod.rs")
-          s = ui.read_text()
-          s = s.replace("*ctx.registers[21].x.as_ref()", "ctx.registers[21].x()")
-          s = s.replace("*ctx.registers[1].x.as_ref()", "ctx.registers[1].x()")
-          s = s.replace("let decompressed_file = ctx.registers[21].x.as_mut();\n    *decompressed_file = inject_arc as u64;", "ctx.registers[21].set_x(inject_arc as u64);")
-          s = s.replace("*ctx.registers[1].x.as_mut() = inject_arc_size;", "ctx.registers[1].set_x(inject_arc_size);")
-          s = s.replace("*ctx.registers[23].x.as_mut() = inject_arc_size;", "ctx.registers[23].set_x(inject_arc_size);")
-          s = s.replace("*ctx.registers[24].x.as_mut() = inject_arc_size;", "ctx.registers[24].set_x(inject_arc_size);")
-          ui.write_text(s)
-          pt = Path("build/UltimateTrainingModpack-7.0.0/src/training/character_specific/ptrainer.rs")
-          s = pt.read_text()
-          s = s.replace("let x20 = ctx.registers[20].x.as_mut();", "let x20 = ctx.registers[20].x();")
-          s = s.replace("*x20 as *mut u64", "x20 as *mut u64")
-          s = s.replace("let w8 = ctx.registers[8].w.as_mut();\n        *w8 = pokemon_value;", "ctx.registers[8].set_w(pokemon_value);")
-          pt.write_text(s)
+          root = Path("build/UltimateTrainingModpack-7.0.0")
+          skyline_rev = "b7fe5c7c297d83f1c63d9101a6e098cfda7fdb5b"
+          smash_rev = "3fa74e3caec74011317c4c6402a22ee45112ab87"
+          for p in root.rglob("Cargo.toml"):
+              s = p.read_text()
+              s = s.replace('https://github.com/austintraver/skyline-smash.git', 'https://github.com/ultimate-research/skyline-smash.git')
+              s = s.replace('https://github.com/ultimate-research/skyline-smash.git" }', 'https://github.com/ultimate-research/skyline-smash.git", rev = "' + smash_rev + '" }')
+              s = s.replace('https://github.com/ultimate-research/skyline-rs.git" }', 'https://github.com/ultimate-research/skyline-rs.git", rev = "' + skyline_rev + '" }')
+              s = s.replace('https://github.com/ultimate-research/skyline-rs" }', 'https://github.com/ultimate-research/skyline-rs.git", rev = "' + skyline_rev + '" }')
+              p.write_text(s)
+          manifest = root / "Cargo.toml"
+          s = manifest.read_text()
+          s += chr(10) + '[patch."https://github.com/ultimate-research/skyline-rs"]' + chr(10) + 'skyline = { git = "https://github.com/ultimate-research/skyline-rs.git", rev = "' + skyline_rev + '" }' + chr(10)
+          manifest.write_text(s)
           PY
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
@@ -94,9 +83,21 @@ jobs:
         run: |
           ls -lh target/aarch64-skyline-switch/release/libtraining_modpack.nro
           file target/aarch64-skyline-switch/release/libtraining_modpack.nro
-      - name: Upload NRO
+      - name: Package matching Skyline dependencies
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          PLUGINS="$GITHUB_WORKSPACE/dist/atmosphere/contents/01006A800016E000/romfs/skyline/plugins"
+          mkdir -p "$PLUGINS"
+          cp target/aarch64-skyline-switch/release/libtraining_modpack.nro "$PLUGINS/"
+          curl -fL https://github.com/ultimate-research/nro-hook-plugin/releases/download/v0.4.0/libnro_hook.nro -o "$PLUGINS/libnro_hook.nro"
+          curl -fL https://github.com/ultimate-research/params-hook-plugin/releases/download/v0.1.1/libparam_hook.nro -o "$PLUGINS/libparam_hook.nro"
+          cat > "$GITHUB_WORKSPACE/dist/INSTALL.txt" <<'EOF'
+          Copy the atmosphere folder to the root of the SD card and merge it with the existing atmosphere folder. This package includes the Training Modpack plus its Skyline dependencies.
+          EOF
+
+      - name: Upload complete SD plugin package
         uses: actions/upload-artifact@v4
         with:
-          name: libtraining_modpack-13.0.4-DI-Mixup
-          path: ${{ env.PROJECT }}/target/aarch64-skyline-switch/release/libtraining_modpack.nro
+          name: training-modpack-7.0.0-DI-Mixup-SD-package
+          path: dist/**
           if-no-files-found: error
