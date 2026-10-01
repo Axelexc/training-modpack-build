@@ -95,6 +95,20 @@ jobs:
           assert old in s
           p.write_text(s.replace(old, new))
           PY
+          SKYLINE_LIB=$(find "$HOME/.cargo/git/checkouts" -path '*/skyline-rs-*/b7fe5c7/src/lib.rs' -print -quit)
+          if [ -z "$SKYLINE_LIB" ]; then
+            echo "ERROR: pinned skyline-rs lib.rs not found."
+            exit 1
+          fi
+          python3 - "$SKYLINE_LIB" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          old = "    start,\n"
+          assert old in s
+          p.write_text(s.replace(old, "", 1))
+          PY
       - name: Build NRO
         working-directory: ${{ env.PROJECT }}
         env:
