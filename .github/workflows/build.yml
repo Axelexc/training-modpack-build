@@ -50,6 +50,9 @@ jobs:
       - name: Install Skyline standard library
         run: cargo-skyline skyline update-std
 
+      - name: Normalize Skyline target specification
+        run: python3 -c 'import json,pathlib; p=pathlib.Path.home()/".cargo/skyline/aarch64-skyline-switch.json"; d=json.loads(p.read_text()); d["target-c-int-width"]=int(d["target-c-int-width"]); p.write_text(json.dumps(d,indent=2))'
+
       - name: Enable Cargo JSON target specs
         working-directory: ${{ env.PROJECT }}
         run: |
