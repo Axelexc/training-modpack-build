@@ -30,6 +30,7 @@ jobs:
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "Source project: $PROJECT"
           find "$PROJECT" -type f -name Cargo.toml -exec sed -i 's|https://github.com/austintraver/skyline-smash.git|https://github.com/ultimate-research/skyline-smash.git|' {} +
+          find "$PROJECT" -type f -name '*.rs' -exec sed -i -E 's/\.x\.as_mut\(\)/.x().as_mut()/g; s/\.w\.as_mut\(\)/.w().as_mut()/g' {} +
 
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
