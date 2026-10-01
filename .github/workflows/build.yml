@@ -43,8 +43,8 @@ jobs:
           manifest = root / "Cargo.toml"
           s = manifest.read_text()
           PY
-      - name: Install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install Rust nightly compatible with Skyline 7.0.0
+        uses: dtolnay/rust-toolchain@nightly-2025-01-15
         with:
           target: x86_64-unknown-linux-gnu
       - name: Install cargo-skyline with current target spec
