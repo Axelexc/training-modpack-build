@@ -16,22 +16,17 @@ jobs:
       - name: Extract DI Mixup source
         run: |
           ZIP=$(find . -maxdepth 1 -type f -name 'UltimateTrainingModpack-DI-Mixup-13.0.4-fixed.zip' -print -quit)
-
           if [ -z "$ZIP" ]; then
             echo "ERROR: UltimateTrainingModpack-DI-Mixup-13.0.4-fixed.zip not found."
             exit 1
           fi
-
           mkdir build
           unzip -q "$ZIP" -d build
-
           PROJECT=$(find build -maxdepth 2 -type f -name Cargo.toml -print -quit | xargs dirname)
-
           if [ -z "$PROJECT" ]; then
             echo "ERROR: Cargo.toml not found."
             exit 1
           fi
-
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "Source project: $PROJECT"
 
@@ -40,18 +35,14 @@ jobs:
         with:
           target: x86_64-unknown-linux-gnu
 
-      - name: Install cargo-skyline
+      - name: Install cargo-skyline with current target spec
         run: |
-          cargo install \
-            --git https://github.com/jugeeya/cargo-skyline \
-            --branch patch-3 \
-            --force
+          git clone --depth 1 --branch patch-3 https://github.com/jugeeya/cargo-skyline /tmp/cargo-skyline
+          python3 -c 'from pathlib import Path; p=Path("/tmp/cargo-skyline/src/update_std.rs"); s=p.read_text(); old="\"target-c-int-width\": \"32\""; assert old in s; p.write_text(s.replace(old,"\"target-c-int-width\": 32"))'
+          cargo install --path /tmp/cargo-skyline --force
 
       - name: Install Skyline standard library
         run: cargo-skyline skyline update-std
-
-      - name: Normalize Skyline target specification
-        run: python3 -c 'import json,pathlib; p=pathlib.Path.home()/".cargo/skyline/aarch64-skyline-switch.json"; d=json.loads(p.read_text()); d["target-c-int-width"]=int(d["target-c-int-width"]); p.write_text(json.dumps(d,indent=2))'
 
       - name: Enable Cargo JSON target specs
         working-directory: ${{ env.PROJECT }}
