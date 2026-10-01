@@ -25,7 +25,7 @@ jobs:
           mkdir build
           unzip -q "$ZIP" -d build
 
-          PROJECT=$(find build -type f -name Cargo.toml -print -quit | xargs dirname)
+          PROJECT=$(find build -maxdepth 2 -type f -name Cargo.toml -print -quit | xargs dirname)
 
           if [ -z "$PROJECT" ]; then
             echo "ERROR: Cargo.toml not found."
@@ -48,15 +48,21 @@ jobs:
             --force
 
       - name: Install Skyline standard library
+        run: cargo-skyline skyline update-std
+
+      - name: Enable Cargo JSON target specs
+        working-directory: ${{ env.PROJECT }}
         run: |
-          cargo-skyline skyline update-std
+          cat >> .cargo/config.toml <<'EOF'
+          [unstable]
+          json-target-spec = true
+          EOF
 
       - name: Build NRO
         working-directory: ${{ env.PROJECT }}
         env:
           RUSTFLAGS: -g
-        run: |
-          cargo-skyline skyline build --release
+        run: cargo-skyline skyline build --release
 
       - name: Verify NRO
         working-directory: ${{ env.PROJECT }}
