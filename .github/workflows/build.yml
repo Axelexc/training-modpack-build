@@ -44,9 +44,10 @@ jobs:
           s = manifest.read_text()
           PY
       - name: Install Rust nightly compatible with Skyline 7.0.0
-        uses: dtolnay/rust-toolchain@nightly-2025-01-15
+        uses: dtolnay/rust-toolchain@master
         with:
-          target: x86_64-unknown-linux-gnu
+          toolchain: nightly-2025-01-15
+          targets: x86_64-unknown-linux-gnu
       - name: Install cargo-skyline with current target spec
         run: |
           git clone --depth 1 --branch patch-3 https://github.com/jugeeya/cargo-skyline /tmp/cargo-skyline
