@@ -31,7 +31,7 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
-          p = Path(os.environ["PROJECT"]) / "src/training/mod.rs"
+          p = Path("build/UltimateTrainingModpack-7.0.0/src/training/mod.rs")
           s = p.read_text()
           s = s.replace("let x8 = ctx.registers[8].x.as_mut();", "")
           s = s.replace("*x8 = 0;", "ctx.registers[8].set_x(0);")
