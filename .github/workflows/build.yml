@@ -53,10 +53,7 @@ jobs:
       - name: Enable Cargo JSON target specs
         working-directory: ${{ env.PROJECT }}
         run: |
-          cat >> .cargo/config.toml <<'EOF'
-          [unstable]
-          json-target-spec = true
-          EOF
+          printf '\n[unstable]\njson-target-spec = true\n' >> .cargo/config.toml
 
       - name: Build NRO
         working-directory: ${{ env.PROJECT }}
