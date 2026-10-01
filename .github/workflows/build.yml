@@ -8,11 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Extract DI Mixup source
         run: |
           ZIP=$(find . -maxdepth 1 -type f -name 'UltimateTrainingModpack-DI-Mixup-13.0.4-fixed.zip' -print -quit)
@@ -30,13 +28,23 @@ jobs:
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "Source project: $PROJECT"
           find "$PROJECT" -type f -name Cargo.toml -exec sed -i 's|https://github.com/austintraver/skyline-smash.git|https://github.com/ultimate-research/skyline-smash.git|' {} +
-          find "$PROJECT" -type f -name '*.rs' -exec sed -i -E 's/\.x\.as_mut\(\)/.x().as_mut()/g; s/\.w\.as_mut\(\)/.w().as_mut()/g' {} +
-
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          p = Path(os.environ["PROJECT"]) / "src/training/mod.rs"
+          s = p.read_text()
+          s = s.replace("let x8 = ctx.registers[8].x.as_mut();", "")
+          s = s.replace("*x8 = 0;", "ctx.registers[8].set_x(0);")
+          s = s.replace("let x22 = ctx.registers[22].x.as_mut();", "")
+          s = s.replace("(*x22) as *mut PauseMenu", "ctx.registers[22].x() as *mut PauseMenu")
+          s = s.replace("let x1 = ctx.registers[1].x.as_mut();", "")
+          s = s.replace("*x1 = on_text_ptr;", "ctx.registers[1].set_x(on_text_ptr);")
+          p.write_text(s)
+          PY
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
           target: x86_64-unknown-linux-gnu
-
       - name: Install cargo-skyline with current target spec
         run: |
           git clone --depth 1 --branch patch-3 https://github.com/jugeeya/cargo-skyline /tmp/cargo-skyline
@@ -55,27 +63,22 @@ jobs:
           p.write_text(s)
           PY
           cargo install --path /tmp/cargo-skyline --force
-
       - name: Install Skyline standard library
         run: cargo-skyline skyline update-std
-
       - name: Enable Cargo JSON target specs
         working-directory: ${{ env.PROJECT }}
         run: |
           printf '\n[unstable]\njson-target-spec = true\n' >> .cargo/config.toml
-
       - name: Build NRO
         working-directory: ${{ env.PROJECT }}
         env:
           RUSTFLAGS: -g
         run: cargo-skyline skyline build --release
-
       - name: Verify NRO
         working-directory: ${{ env.PROJECT }}
         run: |
           ls -lh target/aarch64-skyline-switch/release/libtraining_modpack.nro
           file target/aarch64-skyline-switch/release/libtraining_modpack.nro
-
       - name: Upload NRO
         uses: actions/upload-artifact@v4
         with:
